@@ -19,7 +19,7 @@ arguments.
 
 The `Be` package name is intentionally retained for source compatibility.
 
-## Installing
+## Building and verification
 
 Haithon is currently distributed from source. The HaikuPorts package named
 `haiku_pyapi_python310` belongs to the earlier project and does not contain
@@ -32,38 +32,40 @@ git clone https://github.com/Be-Quiet-Home/Haithon.git --recursive
 cd Haithon
 ```
 
-Build using all available CPU cores:
+The repository-root `Makefile` is the public build and verification entrypoint:
 
 ```
-jam -j$(nproc)
+make
+make smoke
+make clean
+make help
 ```
 
-Install the `Be` Python package:
+`make` builds Haithon through the inherited Jam provider. `make smoke` stages
+the `Be` package below `build/`, imports it from that isolated location, checks
+the expected extension-module surface, and verifies that no Qt, GTK, wxWidgets,
+or PySide module was loaded. It does not install Haithon into the system Python
+environment.
+
+The default build uses Python 3.10 and the release profile. Build variables can
+be overridden explicitly:
 
 ```
-jam install
+make PYTHON_VERSION=3.10 TYPE=debug JOBS=4
 ```
 
-## Build parameters
+| Variable         | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `PYTHON_VERSION` | Python version. Default: `3.10`                  |
+| `PYTHON`         | Python executable. Default: `python3`            |
+| `TYPE`           | `release` or `debug`. Default: `release`         |
+| `JOBS`           | Number of parallel Jam jobs                      |
+| `BUILD_DIR`      | Build directory                                  |
+| `SMOKE_ROOT`     | Isolated staging root used by `make smoke`       |
 
-Additional build parameters use the `-sPARAMETER=VALUE` form.
-
-| Parameter        | Description                                   |
-| ---------------- | --------------------------------------------- |
-| python_version   | Python version. Default: 3.10                 |
-| py               | Alias of `python_version`                     |
-| type             | Debug or release build. Default: release      |
-| build_location   | Build directory. Default: `build/python$(python_version)_$(type)` |
-| install_location | Installation root. Default: `/boot/system/non-packaged/lib/python$(python_version)/site-packages` |
-
-For example, an isolated release build for Python 3.10 can be created with:
-
-```
-jam -j$(nproc) \
-    -spython_version=3.10 \
-    -stype=release \
-    -sbuild_location=/boot/home/config/cache/Haithon-build
-```
+A stable system-wide installation or Haiku package contract has not yet been
+declared. Consumers should use a validated Haithon commit and an isolated build
+or staging directory.
 
 ## Documentation
 

@@ -1,4 +1,4 @@
-# There two ways to import Haiku-PyAPI
+# There are two ways to import Haithon
 # First, you can import only the things you need
 from Be import BApplication, BWindow, BRect, BMessage, BView, BButton, window_type,  B_NOT_RESIZABLE, B_QUIT_ON_WINDOW_CLOSE, int32, B_WILL_DRAW, B_FOLLOW_NONE
 # Or import everything!

@@ -1,15 +1,15 @@
-.. Haiku-PyAPI documentation master file, created by
-   sphinx-quickstart on Wed Dec  3 20:09:35 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. Haithon documentation master file, created from the original
+   Haiku-PyAPI documentation tree.
 
-Welcome to Haiku-PyAPI's documentation!
-=======================================
+Welcome to Haithon's documentation!
+===================================
 
-Welcome to the official documentation for Haiku-PyAPI, the Python interface for the Haiku environment.
-Here you will find complete references for all available Kits, including classes, methods, and library functions.
+Haithon provides native Python bindings for the Haiku API. The public Python
+package remains ``Be`` so existing applications can continue to import native
+Haiku classes without a source-level namespace migration.
 
-Start by exploring the following sections:
+The following sections document the available Kits, classes, methods, and
+library functions.
 
 .. toctree::
    :maxdepth: 2

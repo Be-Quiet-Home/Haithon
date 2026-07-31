@@ -9,10 +9,10 @@ import os,sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 bindings_path = os.path.join(project_root, '..','build', 'python3.10_release')
 sys.path.insert(0, bindings_path)
-project = 'Haiku-PyAPI'
-copyright = '2025, coolcoder613eb, Zardshard, Fabio Tomat'
-author = 'Fabio Tomat'
-release = '0.4'
+project = 'Haithon'
+copyright = '2025, coolcoder613eb, Zardshard, Fabio Tomat; 2026, Be-Quiet-Home'
+author = 'Haithon contributors'
+release = '0.1.0-dev'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

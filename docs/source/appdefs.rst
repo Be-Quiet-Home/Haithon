@@ -19,7 +19,7 @@ Command Message Codes
 Cursor Definitions
 -------------------
 
-The Haiku-PyAPI module `Be.AppDefs` provides several predefined cursors, both old-style
+The Haithon module ``Be.AppDefs`` provides several predefined cursors, both old-style
 (byte arrays) and new-style (system constants). These cursors can be used in applications
 to set the mouse cursor.
 

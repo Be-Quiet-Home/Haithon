@@ -1,3 +1,5 @@
-This directory holds tests for Haiku-PyAPI. Currently, the tests are informal,
-since we do not have any testing framework setup yet. (Help would be
-appreciated!)
+This directory contains tests for Haithon.
+
+The suite currently combines historical interactive probes with focused
+regression tests. Regression tests are standalone Python programs and must exit
+with a nonzero status when their contract is violated.

@@ -477,9 +477,14 @@ Remove access for an application to a keyring.
 :rtype: int
 )doc", py::arg("keyring"), py::arg("signature"))
 .def("GeneratePassword", [](BKeyStore& self,size_t length,uint32 flags) {
-    BPasswordKey*  password;
-    status_t r = self.GeneratePassword(*password, length, flags);
-    return std::make_tuple(r,password);
+    BPasswordKey password;
+    status_t r = self.GeneratePassword(password, length, flags);
+
+    py::object resultPassword = py::cast(
+        new BPasswordKey(password),
+        py::return_value_policy::take_ownership);
+
+    return py::make_tuple(r, resultPassword);
 }
 , R"doc(
 Unimplemented.

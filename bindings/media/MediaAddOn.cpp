@@ -24,29 +24,14 @@ void set_dormant_node_info_name(dormant_node_info& self, const std::string& name
 
 //std::pair<status_t, std::string> InitCheck(BMediaAddOn& self){
 //std::pair<status_t, std::vector<char *>> InitCheck_wrapper(BMediaAddOn& self){
-py::tuple InitCheck_wrapper(BMediaAddOn& self){
-	/*
-	const std::vector<char*> _failureText;
-	const char** failureText;
-	//const char* failureText = nullptr;
-	//status_t status = self.InitCheck(failureText);
-	status_t status = self.InitCheck(failureText);
-	
-	//return {status, failureText ? std::string(failureText) : ""};
-	//return {status, _failureText};
-	return py::make_tuple(status,_failureText);
-	*/
-	
-	
-	const char ** failureText;
-    std::vector<char*> _failureText;
-    status_t status = self.InitCheck(failureText);
-    // Assume che la fine dell'array sia segnata da un puntatore nullo
-    for (size_t i = 0; failureText[i] != nullptr; ++i) {
-        _failureText.push_back(const_cast<char*>(failureText[i]));
-    }
+py::tuple InitCheck_wrapper(BMediaAddOn& self)
+{
+    const char* failureText = nullptr;
+    status_t status = self.InitCheck(&failureText);
 
-    return py::make_tuple(status,_failureText);
+    return py::make_tuple(
+        status,
+        failureText != nullptr ? failureText : "");
 }
 
 PYBIND11_MODULE(MediaAddOn, m)

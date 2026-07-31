@@ -32,20 +32,15 @@ git clone https://github.com/Be-Quiet-Home/Haithon.git --recursive
 cd Haithon
 ```
 
-The repository-root `Makefile` is the public build and verification entrypoint:
+The repository-root `Makefile` is the public build entrypoint:
 
 ```
 make
-make smoke
 make clean
 make help
 ```
 
-`make` builds Haithon through the inherited Jam provider. `make smoke` stages
-the `Be` package below `build/`, imports it from that isolated location, checks
-the expected extension-module surface, and verifies that no Qt, GTK, wxWidgets,
-or PySide module was loaded. It does not install Haithon into the system Python
-environment.
+`make` builds Haithon through the inherited Jam provider. `make clean` removes generated build products.
 
 The default build uses Python 3.10 and the release profile. Build variables can
 be overridden explicitly:
@@ -57,11 +52,9 @@ make PYTHON_VERSION=3.10 TYPE=debug JOBS=4
 | Variable         | Description                                      |
 | ---------------- | ------------------------------------------------ |
 | `PYTHON_VERSION` | Python version. Default: `3.10`                  |
-| `PYTHON`         | Python executable. Default: `python3`            |
 | `TYPE`           | `release` or `debug`. Default: `release`         |
 | `JOBS`           | Number of parallel Jam jobs                      |
 | `BUILD_DIR`      | Build directory                                  |
-| `SMOKE_ROOT`     | Isolated staging root used by `make smoke`       |
 
 A stable system-wide installation or Haiku package contract has not yet been
 declared. Consumers should use a validated Haithon commit and an isolated build

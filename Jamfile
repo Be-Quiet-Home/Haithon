@@ -69,6 +69,7 @@ rule Symlink
 py ?= 3.10 ;
 python_version ?= $(py) ;
 type ?= release ;
+warning_mode ?= none ;
 build_location ?= build/python$(python_version)_$(type) ;
 install_location ?=
 	/boot/system/non-packaged/lib/python$(python_version)/site-packages ;
@@ -102,6 +103,13 @@ SubDirHdrs /system/develop/headers/python$(python_version)/ ;
 
 # Additional C++ flags to use when compiling
 SubDirC++Flags -std=c++14 -pipe -fPIC -fvisibility=hidden ;
+
+if $(warning_mode) = inventory {
+	SubDirC++Flags -Wall -Wextra -Wpedantic ;
+} else if $(warning_mode) != none {
+	Exit "Bad warning_mode given. Valid options are \"none\" and \"inventory\"" ;
+}
+
 if $(type) = release {
 	# Optimize for build size when making a release build
 	SubDirC++Flags -Os ;

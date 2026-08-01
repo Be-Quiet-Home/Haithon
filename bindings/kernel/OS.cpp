@@ -622,13 +622,9 @@ m.def("debugger", &debugger, "", py::arg("message"));
 
 m.def("disable_debugger", &disable_debugger, "", py::arg("state"));
 
-//m.def("debug_printf", &debug_printf, "", py::arg("format"));
-
-m.def("debug_vprintf", &debug_vprintf, "", py::arg("format"), py::arg("args"));
-
-//m.def("ktrace_printf", &ktrace_printf, "", py::arg("format"));
-
-m.def("ktrace_vprintf", &ktrace_vprintf, "", py::arg("format"), py::arg("args"));
+// C varargs and va_list have no safe Python representation. Keep the
+// debug_printf/debug_vprintf and ktrace_printf/ktrace_vprintf families
+// outside the Python API.
 
 m.def("get_system_info", &get_system_info, "", py::arg("info"));
 

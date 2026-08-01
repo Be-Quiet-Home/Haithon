@@ -223,11 +223,17 @@ py::class_<BListView, PyBListView, BView, BInvoker,std::unique_ptr<BListView, py
 
 //.def("DoForEach", py::overload_cast<bool(*func)(BListItem*item,void*arg), void *>(&BListView::DoForEach), "", py::arg(""), py::arg("arg"))
 
-.def("DoForEach", [](BListView& self, py::function& func, void* arg) -> void {
-            // Utilizzare una lambda expression per chiamare la funzione Python per ogni elemento
+.def("DoForEach", [](BListView& self, py::function func, py::object arg) -> void {
+            struct PythonCallbackContext {
+                py::function function;
+                py::object argument;
+            } context{func, arg};
+
             self.DoForEach(static_cast<bool (*)(BListItem*, void*)>(+[](BListItem* item, void* userData) -> bool {
-                return CallPythonFunction(item, *static_cast<py::function*>(userData));
-            }), arg);
+                auto* context = static_cast<PythonCallbackContext*>(userData);
+                py::object result = context->function(item, context->argument);
+                return py::cast<bool>(result);
+            }), &context);
         }, "", py::arg("func"), py::arg("arg"))
 
 //.def("Items", &BListView::Items, "")

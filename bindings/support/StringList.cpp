@@ -81,11 +81,18 @@ py::class_<BStringList, BFlattenable>(m, "BStringList")
     }), &func);
 }, "", py::arg("func"))
 //.def("DoForEach", py::overload_cast<bool(*func)(constBString&string,void*arg2), void *>(&BStringList::DoForEach), "", py::arg(""), py::arg("arg2"))
-.def("DoForEach", [](BStringList& self, py::function& func, void* arg2) -> void {
+.def("DoForEach", [](BStringList& self, py::function func, py::object arg) -> void {
+    struct PythonCallbackContext {
+        py::function function;
+        py::object argument;
+    } context{func, arg};
+
     self.DoForEach(static_cast<bool (*)(const BString&, void*)>(+[](const BString& item, void* userData) -> bool {
-        return CallPythonFunction(item, *static_cast<py::function*>(userData));
-    }), arg2);
-}, "", py::arg("func"), py::arg("arg2"))
+        auto* context = static_cast<PythonCallbackContext*>(userData);
+        py::object result = context->function(item, context->argument);
+        return py::cast<bool>(result);
+    }), &context);
+}, "", py::arg("func"), py::arg("arg"))
 .def("__copy__", &BStringList::operator=, "", py::arg("other"))
 .def("__eq__", &BStringList::operator==, "", py::arg("other"))
 .def("__ne__", &BStringList::operator!=, "", py::arg("other"))

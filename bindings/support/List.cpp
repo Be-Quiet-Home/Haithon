@@ -43,18 +43,23 @@ py::class_<BList>(m, "BList")
 .def("IndexOf", py::overload_cast<const void *>(&BList::IndexOf, py::const_), "", py::arg("item"))
 .def("CountItems", &BList::CountItems, "")
 .def("IsEmpty", &BList::IsEmpty, "")
-//.def("DoForEach", py::overload_cast<bool(*func)(void*item)>(&BList::DoForEach), "", py::arg(""))
-.def("DoForEach", [](BList& self,py::function& func, void* item) -> void {
-	self.DoForEach(static_cast<bool (*)(void*, void*)>(+[](void* item, void* userData) -> bool {
-            return CallPythonFunction(item, *static_cast<py::function*>(userData));
-        }), item);
-}, "", py::arg("func"), py::arg("item"))
+.def("DoForEach", [](BList& self, py::function& func) -> void {
+    self.DoForEach(static_cast<bool (*)(void*, void*)>(+[](void* item, void* userData) -> bool {
+        return CallPythonFunction(item, *static_cast<py::function*>(userData));
+    }), &func);
+}, "", py::arg("func"))
 
-//.def("DoForEach", py::overload_cast<bool(*func)(void*item,void*arg2), void *>(&BList::DoForEach), "", py::arg(""), py::arg("arg2"))
-.def("DoForEach", [](BList& self, py::function& func, void* arg2) -> void {
-            self.DoForEach(static_cast<bool (*)(void*, void*)>(+[](void* item, void* userData) -> bool {
-                return CallPythonFunction(item, *static_cast<py::function*>(userData));
-            }), arg2);
-        }, "", py::arg("func"), py::arg("arg2"))
+.def("DoForEach", [](BList& self, py::function func, py::object arg) -> void {
+    struct PythonCallbackContext {
+        py::function function;
+        py::object argument;
+    } context{func, arg};
+
+    self.DoForEach(static_cast<bool (*)(void*, void*)>(+[](void* item, void* userData) -> bool {
+        auto* context = static_cast<PythonCallbackContext*>(userData);
+        py::object result = context->function(item, context->argument);
+        return py::cast<bool>(result);
+    }), &context);
+}, "", py::arg("func"), py::arg("arg"))
 ;
 }

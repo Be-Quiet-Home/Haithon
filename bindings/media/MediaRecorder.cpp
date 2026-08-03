@@ -22,7 +22,8 @@ py::enum_<BMediaRecorder::notification>(m, "notification", "")
 py::class_<BMediaRecorder>(m, "BMediaRecorder")
 .def(py::init<const char *, media_type>(), "", py::arg("name"), py::arg("type")=B_MEDIA_UNKNOWN_TYPE)
 .def("InitCheck", &BMediaRecorder::InitCheck, "")
-.def("SetHooks", &BMediaRecorder::SetHooks, "", py::arg("recordFunc")=NULL, py::arg("notifyFunc")=NULL, py::arg("cookie")=NULL)
+// Native callback pointers and cookies have no safe Python representation.
+// Keep SetHooks outside the Python API until a managed bridge exists.
 .def("SetAcceptedFormat", &BMediaRecorder::SetAcceptedFormat, "", py::arg("format"))
 .def("AcceptedFormat", &BMediaRecorder::AcceptedFormat, "")
 .def("Start", &BMediaRecorder::Start, "", py::arg("force")=false)

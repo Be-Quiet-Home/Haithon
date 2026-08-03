@@ -30,8 +30,10 @@ py::enum_<bus_type>(m, "bus_type", "//! The BMediaRoster is the main API to the 
 //m.attr("BMediaRosterEx") = py::cast(BMediaRosterEx);
 
 py::class_<BMediaRoster, BLooper, py::smart_holder>(m, "BMediaRoster")
-.def_static("Roster", &BMediaRoster::Roster, "", py::arg("_error")=NULL)
-.def_static("CurrentRoster", &BMediaRoster::CurrentRoster, "")
+.def_static("Roster", &BMediaRoster::Roster, "",
+    py::arg("_error")=NULL, py::return_value_policy::reference)
+.def_static("CurrentRoster", &BMediaRoster::CurrentRoster, "",
+    py::return_value_policy::reference)
 .def_static("IsRunning", &BMediaRoster::IsRunning, "")
 .def("GetVideoInput", &BMediaRoster::GetVideoInput, "", py::arg("_node"))
 .def("GetAudioInput", &BMediaRoster::GetAudioInput, "", py::arg("_node"))

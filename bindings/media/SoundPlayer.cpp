@@ -41,9 +41,14 @@ py::class_<BSoundPlayer>(m, "BSoundPlayer")
 //.def(py::init<const media_raw_audio_format *, const char *, BufferPlayerFunc, EventNotifierFunc, void *>(), "", py::arg("format"), py::arg("name")=NULL, py::arg("playerFunction")=NULL, py::arg("eventNotifierFunction")=NULL, py::arg("cookie")=NULL)
 //.def(py::init<const media_node &, const media_multi_audio_format *, const char *, const media_input *, BufferPlayerFunc, EventNotifierFunc, void *>(), "", py::arg("toNode"), py::arg("format")=NULL, py::arg("name")=NULL, py::arg("input")=NULL, py::arg("playerFunction")=NULL, py::arg("eventNotifierFunction")=NULL, py::arg("cookie")=NULL)
 
-.def(py::init<const char*, BSoundPlayer::BufferPlayerFunc, BSoundPlayer::EventNotifierFunc, void*>(), py::arg("name") = nullptr, py::arg("playerFunction") = nullptr, py::arg("eventNotifierFunction") = nullptr, py::arg("cookie") = nullptr)
-.def(py::init<const media_raw_audio_format*, const char*, BSoundPlayer::BufferPlayerFunc, BSoundPlayer::EventNotifierFunc, void*>(), py::arg("format"), py::arg("name") = nullptr, py::arg("playerFunction") = nullptr, py::arg("eventNotifierFunction") = nullptr, py::arg("cookie") = nullptr)
-.def(py::init<const media_node&, const media_multi_audio_format*, const char*, const media_input*, BSoundPlayer::BufferPlayerFunc, BSoundPlayer::EventNotifierFunc, void*>(), py::arg("toNode"), py::arg("format") = nullptr, py::arg("name") = nullptr, py::arg("input") = nullptr, py::arg("playerFunction") = nullptr, py::arg("eventNotifierFunction") = nullptr, py::arg("cookie") = nullptr)
+.def(py::init([](const char* name) {
+	return new BSoundPlayer(name, nullptr, nullptr, nullptr);
+}), py::arg("name") = nullptr)
+.def(py::init([](const media_raw_audio_format* format, const char* name) {
+	return new BSoundPlayer(format, name, nullptr, nullptr, nullptr);
+}), py::arg("format"), py::arg("name") = nullptr)
+// The media-node constructor remains outside Python until node acquisition
+// and lifetime ownership have a safe, testable contract.
 
 .def("InitCheck", &BSoundPlayer::InitCheck, "")
 .def("Format", &BSoundPlayer::Format, "")

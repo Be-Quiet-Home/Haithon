@@ -54,26 +54,8 @@ py::class_<BSoundPlayer>(m, "BSoundPlayer")
 .def("Format", &BSoundPlayer::Format, "")
 .def("Start", &BSoundPlayer::Start, "")
 .def("Stop", &BSoundPlayer::Stop, "", py::arg("block")=true, py::arg("flush")=true)
-//.def("BufferPlayer", &BSoundPlayer::BufferPlayer, "")
-//attempt1
-//.def("BufferPlayer", [](const BSoundPlayer& self) { return self.BufferPlayer(); },"")
-//attempt2
-.def("BufferPlayer", [](const BSoundPlayer& self) -> std::function<void(void*, void*, size_t, const media_raw_audio_format&)> { 
-	BSoundPlayer::BufferPlayerFunc playerFunc = self.BufferPlayer();
-	return [playerFunc](void* cookie, void* buffer, size_t size, const media_raw_audio_format& format) { if (playerFunc) { playerFunc(cookie, buffer, size, format); } }; },"") //TODO test this
-.def("SetBufferPlayer", &BSoundPlayer::SetBufferPlayer, "", py::arg(""))
-//.def("EventNotifier", &BSoundPlayer::EventNotifier, "")
-//attempt variadic impossible
-/*.def("EventNotifier", [](const BSoundPlayer& self) -> std::function<void(void*, BSoundPlayer::sound_player_notification, ...)> { 
-	BSoundPlayer::EventNotifierFunc notifierFunc = self.EventNotifier();
-	return [notifierFunc](void* cookie, BSoundPlayer::sound_player_notification what, ...) { if (notifierFunc) { notifierFunc(cookie, what); } }; },"")*/
-.def("EventNotifier", [](const BSoundPlayer& self) -> std::function<void(void*, BSoundPlayer::sound_player_notification)> { 
-	BSoundPlayer::EventNotifierFunc notifierFunc = self.EventNotifier();
-	return [notifierFunc](void* cookie, BSoundPlayer::sound_player_notification what) { if (notifierFunc) { notifierFunc(cookie, what); } }; },"") //TODO test this
-.def("SetNotifier", &BSoundPlayer::SetNotifier, "", py::arg("eventNotifierFunction"))
-.def("Cookie", &BSoundPlayer::Cookie, "")
-.def("SetCookie", &BSoundPlayer::SetCookie, "", py::arg("cookie"))
-.def("SetCallbacks", &BSoundPlayer::SetCallbacks, "", py::arg("playerFunction")=NULL, py::arg("eventNotifierFunction")=NULL, py::arg("cookie")=NULL)
+// Native callback pointers and cookies have no safe Python ownership contract.
+// Keep the callback surface outside Python until a managed bridge exists.
 .def("CurrentTime", &BSoundPlayer::CurrentTime, "")
 .def("PerformanceTime", &BSoundPlayer::PerformanceTime, "")
 .def("Preroll", &BSoundPlayer::Preroll, "")

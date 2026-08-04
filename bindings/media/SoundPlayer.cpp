@@ -47,8 +47,15 @@ py::class_<BSoundPlayer>(m, "BSoundPlayer")
 .def(py::init([](const media_raw_audio_format* format, const char* name) {
 	return new BSoundPlayer(format, name, nullptr, nullptr, nullptr);
 }), py::arg("format"), py::arg("name") = nullptr)
-// The media-node constructor remains outside Python until node acquisition
-// and lifetime ownership have a safe, testable contract.
+.def(py::init([](
+    const media_node& toNode,
+    const media_multi_audio_format& format,
+    const char* name,
+    const media_input* input) {
+    return new BSoundPlayer(
+        toNode, &format, name, input, nullptr, nullptr, nullptr);
+}), py::arg("toNode"), py::arg("format"),
+    py::arg("name") = nullptr, py::arg("input") = nullptr)
 
 .def("InitCheck", &BSoundPlayer::InitCheck, "")
 .def("Format", &BSoundPlayer::Format, "")

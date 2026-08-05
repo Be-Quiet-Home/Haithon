@@ -924,8 +924,14 @@ m.def("__lt__", py::overload_cast<const media_file_format_id &, const media_file
 
 m.def("get_next_file_format", &get_next_file_format, "", py::arg("cookie"), py::arg("mfi"));
 
-m.def("launch_media_server", &launch_media_server, "", py::arg("timeout")=B_INFINITE_TIMEOUT, py::arg("bool(*progress)(intstage,constchar*message,void*cookie)")=NULL, py::arg("cookie")=NULL, py::arg("flags")=0);
+m.def("launch_media_server",
+	[](bigtime_t timeout, uint32 flags) {
+		return launch_media_server(timeout, nullptr, nullptr, flags);
+	}, "", py::arg("timeout")=B_INFINITE_TIMEOUT, py::arg("flags")=0);
 
-m.def("shutdown_media_server", &shutdown_media_server, "", py::arg("timeout")=B_INFINITE_TIMEOUT, py::arg("bool(*progress)(intstage,constchar*message,void*cookie)")=NULL, py::arg("cookie")=NULL);
+m.def("shutdown_media_server",
+	[](bigtime_t timeout) {
+		return shutdown_media_server(timeout, nullptr, nullptr);
+	}, "", py::arg("timeout")=B_INFINITE_TIMEOUT);
 
 }

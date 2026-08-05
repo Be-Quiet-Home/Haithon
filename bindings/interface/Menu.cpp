@@ -185,7 +185,6 @@ py::class_<BMenu, PyBMenu, BView, std::unique_ptr<BMenu, py::nodelete>>(m, "BMen
 .def("Perform", &BMenu::Perform, "", py::arg("d"), py::arg("arg"))
 .def("AddDynamicItem", &BMenu::AddDynamicItem, "", py::arg("state"))
 .def("DrawBackground", &BMenu::DrawBackground, "", py::arg("updateRect"))
-.def("SetTrackingHook", &BMenu::SetTrackingHook, "", py::arg("hook"), py::arg("state"))
 .def("SortItems", &BMenu::SortItems, "", py::arg(""))
 .def("SwapItems", &BMenu::SwapItems, "", py::arg("indexA"), py::arg("indexB"))
 .def("MoveItem", &BMenu::MoveItem, "", py::arg("indexFrom"), py::arg("indexTo"))

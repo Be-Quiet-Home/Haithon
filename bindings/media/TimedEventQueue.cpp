@@ -93,8 +93,6 @@ py::class_<BTimedEventQueue>(m, "BTimedEventQueue")
 .def("LastEvent", &BTimedEventQueue::LastEvent, "")
 .def("LastEventTime", &BTimedEventQueue::LastEventTime, "")
 .def("FindFirstMatch", &BTimedEventQueue::FindFirstMatch, "", py::arg("eventTime"), py::arg("direction"), py::arg("inclusive")=true, py::arg("eventType")=BTimedEventQueue::event_type::B_ANY_EVENT)
-.def("DoForEach", &BTimedEventQueue::DoForEach, "", py::arg("hook"), py::arg("context"), py::arg("eventTime")=0, py::arg("direction")=BTimedEventQueue::time_direction::B_ALWAYS, py::arg("inclusive")=true, py::arg("eventType")=BTimedEventQueue::event_type::B_ANY_EVENT)
-.def("SetCleanupHook", &BTimedEventQueue::SetCleanupHook, "", py::arg("hook"), py::arg("context"))
 .def("FlushEvents", &BTimedEventQueue::FlushEvents, "", py::arg("eventTime"), py::arg("direction"), py::arg("inclusive")=true, py::arg("eventType")=BTimedEventQueue::event_type::B_ANY_EVENT)
 ;
 

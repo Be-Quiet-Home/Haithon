@@ -136,7 +136,6 @@ py::class_<BOutlineListView,PyBOutlineListView, BListView,std::unique_ptr<BOutli
 .def("FullListSortItems", &BOutlineListView::FullListSortItems, "", py::arg(""))
 .def("SortItemsUnder", &BOutlineListView::SortItemsUnder, "", py::arg("superItem"), py::arg("oneLevelOnly"), py::arg(""))
 .def("CountItemsUnder", &BOutlineListView::CountItemsUnder, "", py::arg("superItem"), py::arg("oneLevelOnly"))
-.def("EachItemUnder", &BOutlineListView::EachItemUnder, "", py::arg("superItem"), py::arg("oneLevelOnly"), py::arg("*(*eachFunc)(BListItem*item,void*arg)"), py::arg("arg"))
 .def("ItemUnderAt", &BOutlineListView::ItemUnderAt, "", py::arg("superItem"), py::arg("oneLevelOnly"), py::arg("index"))
 ;
 

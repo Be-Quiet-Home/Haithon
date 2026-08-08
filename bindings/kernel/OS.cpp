@@ -560,7 +560,6 @@ m.def("get_next_team_info", &get_next_team_info_wrapper, "", py::arg("cookie"), 
 m.def("_get_team_usage_info", &_get_team_usage_info, "", py::arg("team"), py::arg("who"), py::arg("info"), py::arg("size"));
 m.def("get_team_usage_info", &get_team_usage_info_wrapper, "", py::arg("team"), py::arg("who"), py::arg("info"));
 
-m.def("spawn_thread", &spawn_thread, "", py::arg(""), py::arg("name"), py::arg("priority"), py::arg("data"));
 
 m.def("kill_thread", &kill_thread, "", py::arg("thread"));
 
@@ -578,7 +577,6 @@ m.def("wait_for_thread", &wait_for_thread, "", py::arg("thread"), py::arg("retur
 
 m.def("wait_for_thread_etc", &wait_for_thread_etc, "", py::arg("id"), py::arg("flags"), py::arg("timeout"), py::arg("_returnCode"));
 
-m.def("on_exit_thread", &on_exit_thread, "", py::arg(""), py::arg("data"));
 
 m.def("find_thread", &find_thread, "", py::arg("name"));
 

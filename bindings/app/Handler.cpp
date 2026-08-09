@@ -3,6 +3,9 @@
 #include <pybind11/iostream.h>
 #include <pybind11/operators.h>
 
+#include <memory>
+#include <stdexcept>
+
 #include <app/Handler.h>
 #include <Archivable.h>
 #include <Messenger.h>
@@ -31,15 +34,7 @@ class PyBHandler : public BHandler, py::trampoline_self_life_support {
         void			SetNextHandler(BHandler* handler) override {
         	PYBIND11_OVERLOAD(void, BHandler, SetNextHandler, handler);
         }
-        void			AddFilter(BMessageFilter* filter) override {
-        	PYBIND11_OVERLOAD(void, BHandler, AddFilter, filter);
-        }
-        bool			RemoveFilter(BMessageFilter* filter) override {
-        	PYBIND11_OVERLOAD(bool, BHandler, RemoveFilter, filter);
-        }
-        void			SetFilterList(BList* filters) override {
-        	PYBIND11_OVERLOAD(void, BHandler, SetFilterList, filters);
-        }
+
         BHandler*		ResolveSpecifier(BMessage* message, int32 index, BMessage* specifier, int32 what, const char* property) override {
         	PYBIND11_OVERLOAD(BHandler*, BHandler, ResolveSpecifier, message, index, specifier, what, property);
         }
@@ -54,13 +49,49 @@ class PyBHandler : public BHandler, py::trampoline_self_life_support {
         }
 };
 
+
+static constexpr const char* kHandlerOwnedFilters
+    = "_haithon_handler_owned_filters";
+
+
+static py::list
+HandlerOwnedFilterRegistry(BHandler& self)
+{
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (py::hasattr(owner, kHandlerOwnedFilters))
+        return owner.attr(kHandlerOwnedFilters).cast<py::list>();
+
+    py::list registry;
+    owner.attr(kHandlerOwnedFilters) = registry;
+    return registry;
+}
+
+
+static bool
+HandlerContainsFilter(BHandler& self, BMessageFilter* filter)
+{
+    BList* filters = self.FilterList();
+    if (filters == nullptr)
+        return false;
+
+    for (int32 i = 0; i < filters->CountItems(); i++) {
+        if (filters->ItemAt(i) == filter)
+            return true;
+    }
+
+    return false;
+}
+
+
 PYBIND11_MODULE(Handler,m)
 {
 m.attr("B_OBSERVER_OBSERVE_ALL") = B_OBSERVER_OBSERVE_ALL;
 m.attr("B_OBSERVE_WHAT_CHANGE") = B_OBSERVE_WHAT_CHANGE;
 m.attr("B_OBSERVE_ORIGINAL_WHAT") = B_OBSERVE_ORIGINAL_WHAT;
 
-py::class_<BHandler, PyBHandler, py::smart_holder>(m, "BHandler",R"doc(
+py::class_<BHandler, PyBHandler, py::smart_holder>(m, "BHandler", py::dynamic_attr(), R"doc(
 This class handles messages that are passed on by a BLooper.
 The BHandler class implements two important pieces of functionality: 
 - the foundations for handling messages 
@@ -166,7 +197,56 @@ Return the next hander in the chain to which the message is passed on.
 :return: The next handler in the chain.
 :rtype: BHandler
 )doc")
-.def("AddFilter", &BHandler::AddFilter, R"doc(
+.def("AddFilter", [](BHandler& self, py::object filterObject) {
+    BLooper* looper = self.Looper();
+    if (looper != nullptr && !looper->IsLocked()) {
+        throw py::value_error(
+            "the handler's looper must be locked before AddFilter"
+        );
+    }
+
+    py::list registry = HandlerOwnedFilterRegistry(self);
+
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::tuple entry = registry[i].cast<py::tuple>();
+        py::object registered = entry[0].cast<py::object>();
+
+        if (registered.is(filterObject)) {
+            throw py::value_error(
+                "this filter is already owned by the handler"
+            );
+        }
+    }
+
+    std::unique_ptr<BMessageFilter> ownership
+        = filterObject.cast<std::unique_ptr<BMessageFilter>>();
+
+    BMessageFilter* raw = ownership.get();
+
+    self.BHandler::AddFilter(raw);
+
+    if (!HandlerContainsFilter(self, raw)) {
+        py::cast(std::move(ownership));
+
+        throw py::value_error(
+            "BHandler::AddFilter rejected the filter"
+        );
+    }
+
+    ownership.release();
+
+    try {
+        registry.append(py::make_tuple(
+            filterObject,
+            py::capsule(raw, "Haithon.BMessageFilter.owned")
+        ));
+    } catch (...) {
+        if (self.BHandler::RemoveFilter(raw))
+            py::cast(std::unique_ptr<BMessageFilter>(raw));
+
+        throw;
+    }
+}, R"doc(
 Add filter as a prerequisite to this handler.
 
 If the handler is associated with a looper, this looper needs to be 
@@ -175,7 +255,54 @@ locked in order for this operation to succeed.
 :param filter: The filter to add
 :type filter: BMessageFilter
 )doc", py::arg("filter"))
-.def("RemoveFilter", &BHandler::RemoveFilter, R"doc(
+.def("RemoveFilter", [](BHandler& self, py::object filterObject) {
+    BLooper* looper = self.Looper();
+    if (looper != nullptr && !looper->IsLocked()) {
+        throw py::value_error(
+            "the handler's looper must be locked before RemoveFilter"
+        );
+    }
+
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (!py::hasattr(owner, kHandlerOwnedFilters))
+        return false;
+
+    py::list registry
+        = owner.attr(kHandlerOwnedFilters).cast<py::list>();
+
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::tuple entry = registry[i].cast<py::tuple>();
+        py::object registered = entry[0].cast<py::object>();
+
+        if (!registered.is(filterObject))
+            continue;
+
+        py::capsule pointer = entry[1].cast<py::capsule>();
+        auto* raw = static_cast<BMessageFilter*>(
+            pointer.get_pointer()
+        );
+
+        if (!self.BHandler::RemoveFilter(raw))
+            return false;
+
+        py::object restored
+            = py::cast(std::unique_ptr<BMessageFilter>(raw));
+
+        if (!restored.is(filterObject)) {
+            throw std::runtime_error(
+                "BMessageFilter ownership restoration changed "
+                "Python object identity"
+            );
+        }
+
+        registry.attr("pop")(i);
+        return true;
+    }
+
+    return false;
+}, R"doc(
 Remove filter from the filter list.
 
 If the handler is associated with a looper, this looper needs to be 
@@ -186,23 +313,6 @@ locked in order for this operation to succeed.
 :return: ``True`` if the filter was in the filter list and is removed, ``False`` if the filter was in the filter list and is removed.
 :rtype: bool
 )doc", py::arg("filter"))
-.def("SetFilterList", &BHandler::SetFilterList, R"doc(
-Set the internal list of filters to the provided list of filters.
-
-If the handler is associated with a looper, this looper needs to be 
-locked in order for this operation to succeed.
-
-The internal list will be replaced with the new list of filters. All 
-the existing filters will be deleted.
-
-:param filters: List of filters to use as internal list of filters.
-:type filters: BList
-)doc", py::arg("filters"))
-// TODO test this one below
-.def("FilterList", &BHandler::FilterList, R"doc(
-Return to the list of filters.
-
-)doc")
 .def("LockLooper", &BHandler::LockLooper, R"doc(
 Conveninent version of Looper.Lock(), but smarter as it avoids race 
 conditions, due to its ability to retrieve the handler's looper and 

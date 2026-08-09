@@ -3,6 +3,9 @@
 #include <pybind11/iostream.h>
 #include <pybind11/operators.h>
 
+#include <memory>
+#include <stdexcept>
+
 #include <app/Looper.h>
 #include <BeBuild.h>
 #include <Handler.h>
@@ -76,15 +79,7 @@ class PyBLooper : public BLooper, public py::trampoline_self_life_support {
         status_t	GetSupportedSuites(BMessage* data) override {
         	PYBIND11_OVERLOAD(status_t, BLooper, GetSupportedSuites, data);
         }
-        void		AddCommonFilter(BMessageFilter* filter) override {
-        	PYBIND11_OVERLOAD(void, BLooper, AddCommonFilter, filter);
-        }
-        bool		RemoveCommonFilter(BMessageFilter* filter) override {
-        	PYBIND11_OVERLOAD(bool, BLooper, RemoveCommonFilter, filter);
-        }
-        void		SetCommonFilterList(BList* filters) override {
-        	PYBIND11_OVERLOAD(void, BLooper, SetCommonFilterList, filters);
-        }
+
         status_t	Perform(perform_code d, void* arg) override {
         	PYBIND11_OVERLOAD(status_t, BLooper, Perform, d, arg);
         }
@@ -108,6 +103,42 @@ void QuitWrapper(BLooper& self) {
 	// If the code reaches this point, the global interpreter lock is
 	// reacquired, otherwise, it isn't. Exactly the behaviour we want.
 }
+
+
+static constexpr const char* kLooperOwnedFilters
+    = "_haithon_looper_owned_filters";
+
+
+static py::list
+LooperOwnedFilterRegistry(BLooper& self)
+{
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (py::hasattr(owner, kLooperOwnedFilters))
+        return owner.attr(kLooperOwnedFilters).cast<py::list>();
+
+    py::list registry;
+    owner.attr(kLooperOwnedFilters) = registry;
+    return registry;
+}
+
+
+static bool
+LooperContainsCommonFilter(BLooper& self, BMessageFilter* filter)
+{
+    BList* filters = self.CommonFilterList();
+    if (filters == nullptr)
+        return false;
+
+    for (int32 i = 0; i < filters->CountItems(); i++) {
+        if (filters->ItemAt(i) == filter)
+            return true;
+    }
+
+    return false;
+}
+
 
 PYBIND11_MODULE(Looper,m)
 {
@@ -691,7 +722,55 @@ have to ``Lock()`` the object first.
 :rtype: tuple
    
 )doc")
-.def("AddCommonFilter", &BLooper::AddCommonFilter, R"doc(
+.def("AddCommonFilter", [](BLooper& self, py::object filterObject) {
+    if (!self.IsLocked()) {
+        throw py::value_error(
+            "the looper must be locked before AddCommonFilter"
+        );
+    }
+
+    py::list registry = LooperOwnedFilterRegistry(self);
+
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::tuple entry = registry[i].cast<py::tuple>();
+        py::object registered = entry[0].cast<py::object>();
+
+        if (registered.is(filterObject)) {
+            throw py::value_error(
+                "this filter is already owned by the looper"
+            );
+        }
+    }
+
+    std::unique_ptr<BMessageFilter> ownership
+        = filterObject.cast<std::unique_ptr<BMessageFilter>>();
+
+    BMessageFilter* raw = ownership.get();
+
+    self.BLooper::AddCommonFilter(raw);
+
+    if (!LooperContainsCommonFilter(self, raw)) {
+        py::cast(std::move(ownership));
+
+        throw py::value_error(
+            "BLooper::AddCommonFilter rejected the filter"
+        );
+    }
+
+    ownership.release();
+
+    try {
+        registry.append(py::make_tuple(
+            filterObject,
+            py::capsule(raw, "Haithon.BMessageFilter.owned")
+        ));
+    } catch (...) {
+        if (self.BLooper::RemoveCommonFilter(raw))
+            py::cast(std::unique_ptr<BMessageFilter>(raw));
+
+        throw;
+    }
+}, R"doc(
    Add a common filter to the list of filters that are applied to all incoming messages.
 
    Filters can only be applied once, so they cannot be shared between loopers, a handler 
@@ -701,7 +780,53 @@ have to ``Lock()`` the object first.
    :type filter: BMessageFilter
 
 )doc", py::arg("filter"))
-.def("RemoveCommonFilter", &BLooper::RemoveCommonFilter, R"doc(
+.def("RemoveCommonFilter", [](BLooper& self, py::object filterObject) {
+    if (!self.IsLocked()) {
+        throw py::value_error(
+            "the looper must be locked before RemoveCommonFilter"
+        );
+    }
+
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (!py::hasattr(owner, kLooperOwnedFilters))
+        return false;
+
+    py::list registry
+        = owner.attr(kLooperOwnedFilters).cast<py::list>();
+
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::tuple entry = registry[i].cast<py::tuple>();
+        py::object registered = entry[0].cast<py::object>();
+
+        if (!registered.is(filterObject))
+            continue;
+
+        py::capsule pointer = entry[1].cast<py::capsule>();
+        auto* raw = static_cast<BMessageFilter*>(
+            pointer.get_pointer()
+        );
+
+        if (!self.BLooper::RemoveCommonFilter(raw))
+            return false;
+
+        py::object restored
+            = py::cast(std::unique_ptr<BMessageFilter>(raw));
+
+        if (!restored.is(filterObject)) {
+            throw std::runtime_error(
+                "BMessageFilter ownership restoration changed "
+                "Python object identity"
+            );
+        }
+
+        registry.attr("pop")(i);
+        return true;
+    }
+
+    return false;
+}, R"doc(
    Remove a filter from the common message filter list.
    
    :param filter: The filter to remove.
@@ -710,30 +835,6 @@ have to ``Lock()`` the object first.
    :rtype: bool
 
 )doc", py::arg("filter"))
-.def("SetCommonFilterList", &BLooper::SetCommonFilterList, R"doc(
-   Set a new list of filters that need to be applied to all incoming messages.
-   You are responsible for validating that all the items in the list of filters are 
-   actual filters. The old list is discarded.
-   
-   .. note::
-   
-      filters can only be applied to one looper or handler. If any of the filters is already associated with another one, this call will fail.
-      
-   :param filters: The new list of filters.
-   :type filters: BList
-   
-)doc", py::arg("filters"))
-.def("CommonFilterList", &BLooper::CommonFilterList, R"doc(
-   Return a list of filters applied to all incoming messages.
-   
-   .. warning::
-   
-      You should use the internal list management functions to manipulate the internal filter list, in order to maintain internal consistency.
-   
-   :return: the internal filter list, or ``None`` if such a list has not yet been created.
-   :rtype: BList
-
-)doc")
 //.def("Perform", &BLooper::Perform, "", py::arg("d"), py::arg("arg"))
 .def("Perform", [](BLooper& self, perform_code d, py::object arg = py::none()) {
 	void* buffer = nullptr;

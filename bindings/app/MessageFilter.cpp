@@ -10,7 +10,7 @@
 
 namespace py = pybind11;
 
-class PyBMessageFilter : public BMessageFilter {
+class PyBMessageFilter : public BMessageFilter, public py::trampoline_self_life_support {
 public:
     using BMessageFilter::BMessageFilter;
 
@@ -72,7 +72,7 @@ Any (The default one).
 .value("B_LOCAL_SOURCE", message_source::B_LOCAL_SOURCE, "Local vis-a-vis this app")
 .export_values();
 
-py::class_<BMessageFilter,PyBMessageFilter>(m, "BMessageFilter",R"doc(
+py::class_<BMessageFilter, PyBMessageFilter, py::smart_holder>(m, "BMessageFilter",R"doc(
 A ``BMessageFilter`` is a message-screening function that you "attach" to 
 a ``BLooper`` or ``BHandler``. The message filter sees messages just before 
 they're dispatched (i.e. just before ``BLooper.DispatchMessage()``), and can 
@@ -103,7 +103,7 @@ restricted.
    **beware** ``filter_hook`` is not Python-usable therefore we ignore it
 
 )doc")
-.def(py::init<uint32>(),R"doc(
+.def(py::init_alias<uint32>(),R"doc(
 Creates and returns a new ``BMessageFilter``.
 
 :param what: A command constant, the ``what`` value of the incoming message must match this value.
@@ -113,7 +113,7 @@ Creates and returns a new ``BMessageFilter``.
 //.def(py::init([](message_delivery d, message_source s) {
 //        return BMessageFilter(d, s, nullptr);
 //}), R"doc(
-.def(py::init<message_delivery, message_source>(), R"doc(
+.def(py::init_alias<message_delivery, message_source>(), R"doc(
 Creates and returns a new ``BMessageFilter``.
 
 :param delivery: specify how message must arrive.
@@ -125,7 +125,7 @@ Creates and returns a new ``BMessageFilter``.
 // .def(py::init([](message_delivery d, message_source s, uint32 w) {
 //         return BMessageFilter(d, s, w, nullptr);
 // }),R"doc(
-.def(py::init<message_delivery, message_source, unsigned int>(), R"doc(
+.def(py::init_alias<message_delivery, message_source, unsigned int>(), R"doc(
 Creates and returns a new ``BMessageFilter``.
 
 :param delivery: specify how message must arrive.

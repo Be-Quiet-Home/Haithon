@@ -85,6 +85,148 @@ HandlerContainsFilter(BHandler& self, BMessageFilter* filter)
 }
 
 
+
+static constexpr const char* kHandlerObserverRefs
+    = "_haithon_handler_observer_refs";
+
+
+static py::list
+HandlerObserverRefRegistry(BHandler& self)
+{
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (py::hasattr(owner, kHandlerObserverRefs))
+        return owner.attr(kHandlerObserverRefs).cast<py::list>();
+
+    py::list registry;
+    owner.attr(kHandlerObserverRefs) = registry;
+    return registry;
+}
+
+
+static py::ssize_t
+FindHandlerObserverRef(const py::list& registry,
+    py::handle observerObject, uint32 what)
+{
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::tuple entry = registry[i].cast<py::tuple>();
+
+        py::object registeredObserver
+            = entry[0].cast<py::object>();
+
+        uint32 registeredWhat
+            = entry[1].cast<uint32>();
+
+        if (registeredObserver.is(observerObject)
+            && registeredWhat == what) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+
+static status_t
+StartWatchingHandler(BHandler& self, py::object observerObject,
+    uint32 what)
+{
+    if (observerObject.is_none())
+        return B_BAD_HANDLER;
+
+    BHandler* observer = observerObject.cast<BHandler*>();
+
+    // Self-observation cannot outlive self and must not create a
+    // Python reference cycle.
+    if (observer == &self)
+        return self.BHandler::StartWatching(observer, what);
+
+    // Mirror Haiku's ObserverList::Add(BHandler*) decision.
+    //
+    // If the observer is already addressable, native code stores a
+    // BMessenger. No Python reachability bridge is needed.
+    BMessenger target(observer);
+    if (target.IsValid())
+        return self.BHandler::StartWatching(observer, what);
+
+    // Only the unaddressable fallback stores a raw non-owning
+    // BHandler pointer. That representation requires Python
+    // reachability for exactly as long as the direct registration
+    // remains logically active.
+    py::list registry = HandlerObserverRefRegistry(self);
+
+    if (FindHandlerObserverRef(registry, observerObject, what) >= 0)
+        return self.BHandler::StartWatching(observer, what);
+
+    registry.append(py::make_tuple(observerObject, what));
+
+    status_t status
+        = self.BHandler::StartWatching(observer, what);
+
+    if (status != B_OK)
+        registry.attr("pop")(py::len(registry) - 1);
+
+    return status;
+}
+
+static status_t
+StopWatchingHandler(BHandler& self, py::object observerObject,
+    uint32 what)
+{
+    if (observerObject.is_none())
+        return B_BAD_HANDLER;
+
+    BHandler* observer = observerObject.cast<BHandler*>();
+
+    if (observer == &self)
+        return self.BHandler::StopWatching(observer, what);
+
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (!py::hasattr(owner, kHandlerObserverRefs))
+        return self.BHandler::StopWatching(observer, what);
+
+    py::list registry
+        = owner.attr(kHandlerObserverRefs).cast<py::list>();
+
+    py::ssize_t index
+        = FindHandlerObserverRef(registry, observerObject, what);
+
+    if (index < 0)
+        return self.BHandler::StopWatching(observer, what);
+
+    status_t status
+        = self.BHandler::StopWatching(observer, what);
+
+    // B_BAD_HANDLER means neither the messenger representation nor
+    // the raw-handler representation remains registered.
+    if (status == B_BAD_HANDLER) {
+        registry.attr("pop")(index);
+        return status;
+    }
+
+    if (status != B_OK)
+        return status;
+
+    // A raw registration can later coexist transiently with a messenger
+    // representation if the observer becomes addressable. Native
+    // ObserverList deduplicates each representation independently.
+    //
+    // Remove a possible second representation before releasing the
+    // Python reachability guarantee.
+    status_t second
+        = self.BHandler::StopWatching(observer, what);
+
+    if (second != B_OK && second != B_BAD_HANDLER)
+        return status;
+
+    registry.attr("pop")(index);
+    return status;
+}
+
+
 PYBIND11_MODULE(Handler,m)
 {
 m.attr("B_OBSERVER_OBSERVE_ALL") = B_OBSERVER_OBSERVE_ALL;
@@ -445,9 +587,14 @@ Unsubscribe this handler from watching all the state changes of the specified ta
 :return: ``B_OK`` if no error, ``B_BAD_HANDLER`` if the specified BHandler isn't valid.
 :rtype: int
 )doc", py::arg("target"))
-.def("StartWatching", py::overload_cast<BHandler *, uint32>(&BHandler::StartWatching), R"doc(
+.def("StartWatching", [](BHandler& self,
+        py::object observer, uint32 what) {
+    return StartWatchingHandler(self, observer, what);
+}, R"doc(
 Subscribe an observer for a specific state change of this handler.
 State changes of this handler that match the what argument, will be sent.
+If Haiku must use its unassociated raw-handler fallback, the Python observer
+is kept alive until the matching registration is removed or this handler is destroyed.
 
 :param observer: The observer for this handler.
 :type observer: BHandler
@@ -456,15 +603,24 @@ State changes of this handler that match the what argument, will be sent.
 :return: During the call of this method, a notification will be transmitted using the observer. If this works, then this method will return ``B_OK``.
 :rtype: int
 )doc", py::arg("observer"), py::arg("what"))
-.def("StartWatchingAll", py::overload_cast<BHandler *>(&BHandler::StartWatchingAll), R"doc(
+.def("StartWatchingAll", [](BHandler& self,
+        py::object observer) {
+    return StartWatchingHandler(
+        self, observer, B_OBSERVER_OBSERVE_ALL);
+}, R"doc(
 Subscribe an observer for a all state changes.
+If Haiku must use its unassociated raw-handler fallback, the Python observer
+is kept alive until the matching registration is removed or this handler is destroyed.
 
 :param target: The observer for this handler.
 :type target: BHandler
 :return: During the call of this method, a notification will be transmitted using the target. If this works, then this method will return ``B_OK``.
 :rtype: int
 )doc", py::arg("observer"))
-.def("StopWatching", py::overload_cast<BHandler *, uint32>(&BHandler::StopWatching), R"doc(
+.def("StopWatching", [](BHandler& self,
+        py::object observer, uint32 what) {
+    return StopWatchingHandler(self, observer, what);
+}, R"doc(
 Unsubscribe an observer from watching a specific state.
 This method will unsubscribe the specified handler from watching a specific event.
 
@@ -475,7 +631,11 @@ This method will unsubscribe the specified handler from watching a specific even
 :return: ``B_OK`` if no error, ``B_BAD_HANDLER`` if the specified BHandler isn't valid.
 :rtype: int
 )doc", py::arg("observer"), py::arg("what"))
-.def("StopWatchingAll", py::overload_cast<BHandler *>(&BHandler::StopWatchingAll), R"doc(
+.def("StopWatchingAll", [](BHandler& self,
+        py::object observer) {
+    return StopWatchingHandler(
+        self, observer, B_OBSERVER_OBSERVE_ALL);
+}, R"doc(
 Unsubscribe an observer from watching all states.
 This method will unsubscribe the specified handler from watching all state changes.
 

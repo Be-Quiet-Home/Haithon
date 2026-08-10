@@ -140,6 +140,26 @@ LooperContainsCommonFilter(BLooper& self, BMessageFilter* filter)
 }
 
 
+
+static constexpr const char* kLooperHandlerRefs
+    = "_haithon_looper_handler_refs";
+
+
+static py::list
+LooperHandlerRefRegistry(BLooper& self)
+{
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (py::hasattr(owner, kLooperHandlerRefs))
+        return owner.attr(kLooperHandlerRefs).cast<py::list>();
+
+    py::list registry;
+    owner.attr(kLooperHandlerRefs) = registry;
+    return registry;
+}
+
+
 PYBIND11_MODULE(Looper,m)
 {
 py::class_<BLooper, PyBLooper, BHandler, py::smart_holder>(m, "BLooper",R"doc(
@@ -421,7 +441,40 @@ have to ``Lock()`` the object first.
    :rtype: bool
 
 )doc")
-.def("AddHandler", &BLooper::AddHandler, R"doc(
+.def("AddHandler", [](BLooper& self, BHandler* handler) {
+    if (handler == nullptr) {
+        self.BLooper::AddHandler(nullptr);
+        return;
+    }
+
+    BLooper* previousLooper = handler->Looper();
+
+    self.BLooper::AddHandler(handler);
+
+    if (handler == &self || handler->Looper() != &self)
+        return;
+
+    py::object handlerObject
+        = py::cast(handler, py::return_value_policy::reference);
+
+    try {
+        py::list registry = LooperHandlerRefRegistry(self);
+
+        for (py::ssize_t i = 0; i < py::len(registry); i++) {
+            py::object registered = registry[i].cast<py::object>();
+
+            if (registered.is(handlerObject))
+                return;
+        }
+
+        registry.append(handlerObject);
+    } catch (...) {
+        if (previousLooper == nullptr && handler->Looper() == &self)
+            self.BLooper::RemoveHandler(handler);
+
+        throw;
+    }
+}, R"doc(
    Associate a handler to this looper.
 
    The handler will be associated to this looper. By default, the handler 
@@ -431,7 +484,36 @@ have to ``Lock()`` the object first.
    :type handler: BHandler
    
 )doc", py::arg("handler"))
-.def("RemoveHandler", &BLooper::RemoveHandler, R"doc(
+.def("RemoveHandler", [](BLooper& self, BHandler* handler) {
+    bool removed = self.BLooper::RemoveHandler(handler);
+
+    if (!removed || handler == nullptr || handler == &self)
+        return removed;
+
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (!py::hasattr(owner, kLooperHandlerRefs))
+        return removed;
+
+    py::list registry
+        = owner.attr(kLooperHandlerRefs).cast<py::list>();
+
+    py::object handlerObject
+        = py::cast(handler, py::return_value_policy::reference);
+
+    for (py::ssize_t i = 0; i < py::len(registry); i++) {
+        py::object registered = registry[i].cast<py::object>();
+
+        if (!registered.is(handlerObject))
+            continue;
+
+        registry.attr("pop")(i);
+        break;
+    }
+
+    return removed;
+}, R"doc(
    Disassociate a handler from this looper.
 
    If the handler is disassociated, it can be reassociated to another looper.

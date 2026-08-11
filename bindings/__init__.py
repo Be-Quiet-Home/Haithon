@@ -10,7 +10,6 @@ from .Looper import *
 from .Application import * # should to be loaded after looper
 from .Message import *
 from .MessageFilter import *
-from .MessageQueue import *
 from .MessageRunner import *
 from .Messenger import *
 from .Notification import *

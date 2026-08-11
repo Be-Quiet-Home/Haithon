@@ -392,15 +392,6 @@ have to ``Lock()`` the object first.
    :type handler: BHandler
 
 )doc", py::arg("message"), py::arg("handler"))
-.def("MessageQueue", &BLooper::MessageQueue, R"doc(
-   Return the internal message queue of this looper.
-   You can then manipulate the message queue. Note that the message 
-   that is being processed is already detached from this queue.
-   
-   :return: The internal message queue.
-   :rtype: BMessageQueue
-
-)doc")
 .def("IsMessageWaiting", &BLooper::IsMessageWaiting, R"doc(
    Check if there is a message waiting.
    

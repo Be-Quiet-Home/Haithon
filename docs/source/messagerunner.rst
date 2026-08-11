@@ -8,7 +8,7 @@ BMessageRunner constructors
 --------------------------------------------
 .. rubric:: `Constructors`
 
-.. function:: BMessageQueue(target,message,interval,count)
+.. function:: BMessageRunner(target,message,interval,count)
 
    Creates a new ``BMessageRunner``.
 
@@ -22,7 +22,7 @@ BMessageRunner constructors
 :type count: int
 
 
-.. function:: BMessageQueue(target,message,interval,count,replyTo)
+.. function:: BMessageRunner(target,message,interval,count,replyTo)
 
    Creates a new BMessageRunner with a reply target.
 

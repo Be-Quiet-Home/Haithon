@@ -36,7 +36,6 @@ Documentation by Kits
    keystore
    looper
    messagefilter
-   messagequeue
    messagerunner
    messenger
    notification

@@ -378,39 +378,6 @@ have to ``Lock()`` the object first.
    :type message: BMessage
 
 )doc", py::arg("message"))
-.def("CurrentMessage", &BLooper::CurrentMessage, R"doc(
-   Retrieve the current message.
-   
-   .. warning::
-      Only call this method from within the thread that processes the messages. It contains 
-      a pointer to the message that is currently being handled. Due to the multithreaded 
-      nature of the operating system, this method will not safely let you read the message 
-      that is being processed by this handler from outside the context of the processing. 
-      If you do want to use a message outside of the processing thread, have a look at 
-      ``DetachCurrentMessage()`` to safely retrieve a message.
-      Haiku Book explains that calling this function from outside the thread that processes 
-      the message, could give you a NULL pointer or an invalid pointer.
-      
-   :return: The message that is currently being processed.
-   :rtype: BMessage
-   
-)doc")
-.def("DetachCurrentMessage", &BLooper::DetachCurrentMessage, R"doc(
-   Get ownership of the message currently being processed.
-
-   Retrieve the current message and gain ownership of it. This means that 
-   the message will not be deleted as soon as the looper is done processing 
-   it. You can then use it for different purposes.
-   
-   .. warning::
-      Only call this method from within the thread that processes the messages. Due to the 
-      multithreaded nature of the operating system, calling it from another thread is very 
-      likely to give you an invalid or a NULL pointer.
-      
-   :return: The message currently being processed.
-   :rtype: BMessage
-
-)doc")
 .def("DispatchExternalMessage", [](BLooper& self,BMessage * message,BHandler * handler) {
     bool  _detached;
     self.DispatchExternalMessage(message, handler, _detached);

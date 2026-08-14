@@ -352,7 +352,8 @@ the native call and the actual information.
          - ``info`` (app_info): app information  
 :rtype: tuple
 )doc")
-.def_static("AppResources", &BApplication::AppResources, R"doc(
+.def_static("AppResources", &BApplication::AppResources,
+    py::return_value_policy::reference, R"doc(
 Return the BResources object associated with the application.
 You may read the data in the BResources object, but you're not 
 allowed to write it.

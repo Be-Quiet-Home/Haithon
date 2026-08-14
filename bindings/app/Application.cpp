@@ -301,28 +301,12 @@ Return the number of windows managed by the application.
 :return: Number of windows.
 :rtype: int
 )doc")
-.def("WindowAt", &BApplication::WindowAt, R"doc(
-Return the window at the specified index.
-
-:param index: Window index.
-:type index: int
-:return: The window at the given index.
-:rtype: BWindow
-)doc", py::arg("index"))
 .def("CountLoopers", &BApplication::CountLoopers, R"doc(
 Return the number of registered BLoopers.
 
 :return: Number of loopers.
 :rtype: int
 )doc")
-.def("LooperAt", &BApplication::LooperAt, R"doc(
-Return the looper at the specified index.
-
-:param index: Looper index.
-:type index: int
-:return: The BLooper at the given index.
-:rtype: BLooper
-)doc", py::arg("index"))
 .def("IsLaunching", &BApplication::IsLaunching, R"doc(
 Returns ``True`` if the application is still launching. An application
 is in its launching phase until ReadyToRun() returns.

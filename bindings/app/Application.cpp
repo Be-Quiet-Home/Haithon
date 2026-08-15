@@ -244,23 +244,6 @@ running use IsLaunching() to tell which.
 .def("AboutRequested", &BApplication::AboutRequested, R"doc(
 Hook function that's invoked when the BApplication receives a ``B_ABOUT_REQUESTED`` message.
 )doc")
-.def("ResolveSpecifier", &BApplication::ResolveSpecifier, R"doc(
-ResolveSpecifier(message: BMessage, index: int, specifier: BMessage, form: int, property: BMessage)
-Determine the proper handler for a scripting message.
-
-:param message: The scripting message.
-:type message: BMessage
-:param index: The index in the specifier array of message.
-:type index: int
-:param specifier: The specifier.
-:type specifier: BMessage
-:param form: The "what" data member of specifier.
-:type form: int
-:param property: The name of the targeted property.
-:type property: str
-:return: the next BHandler that should look at the message.
-:rtype: BHandler
-)doc", py::arg("message"), py::arg("index"), py::arg("specifier"), py::arg("form"), py::arg("property"))
 .def("ShowCursor", &BApplication::ShowCursor, R"doc(
 Restore the mouse cursor.
 )doc")

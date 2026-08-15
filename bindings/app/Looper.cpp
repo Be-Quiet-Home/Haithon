@@ -717,21 +717,22 @@ have to ``Lock()`` the object first.
    
 )doc")
 /////////////////////////////////////
-.def("ResolveSpecifier", &BLooper::ResolveSpecifier, R"doc(
-   Determine the proper handler for a scripting message.
-   
-   :param message: The scripting message to determine the handler.
-   :type message: BMessage
-    param index: The index of the specifier.
-   :type index: int
-   :param specifier: The message which contains the specifier.
-   :type specifier: BMessage
-    param what: The ``what`` field of the specifier message.
-   :type what: int
-   :param property: The name of the target property.
-   :type property: str
+.def("ResolveSpecifier",
+    [](BLooper&, BMessage*, int32, BMessage*, int32,
+        const char*) -> BHandler* {
+        throw std::runtime_error(
+            "direct BLooper.ResolveSpecifier calls are unavailable because "
+            "the resolved handler may have an independent native lifetime"
+        );
+    }, R"doc(
+Direct calls are unavailable because the resolved handler may have an
+independent native lifetime.
 
-)doc", py::arg("message"), py::arg("index"), py::arg("specifier"), py::arg("what"), py::arg("property"))
+Override ``ResolveSpecifier()`` in a Python subclass when implementing
+scripting behavior.
+)doc", py::arg("message"), py::arg("index"), py::arg("specifier"),
+    py::arg("what"), py::arg("property"))
+
 /* non pythonic version */
 .def("GetSupportedSuites", &BLooper::GetSupportedSuites, R"doc(
    Report the suites of messages and specifiers that derived classes understand.

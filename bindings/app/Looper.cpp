@@ -160,6 +160,39 @@ LooperHandlerRefRegistry(BLooper& self)
 }
 
 
+
+static py::object
+LooperBorrowedHandlerObject(BLooper& self, BHandler* handler)
+{
+    if (handler == nullptr)
+        return py::none();
+
+    // A method call on self necessarily starts with an existing Python
+    // wrapper for this BLooper. Reuse it; never manufacture another one.
+    if (handler == &self)
+        return py::cast(&self, py::return_value_policy::reference);
+
+    py::object owner
+        = py::cast(&self, py::return_value_policy::reference);
+
+    if (py::hasattr(owner, kLooperHandlerRefs)) {
+        py::list registry
+            = owner.attr(kLooperHandlerRefs).cast<py::list>();
+
+        for (py::ssize_t i = 0; i < py::len(registry); i++) {
+            py::object registered
+                = registry[i].cast<py::object>();
+
+            if (registered.cast<BHandler*>() == handler)
+                return registered;
+        }
+    }
+
+    throw std::runtime_error(
+        "native handler cannot be returned safely to Python"
+    );
+}
+
 PYBIND11_MODULE(Looper,m)
 {
 py::class_<BLooper, PyBLooper, BHandler, py::smart_holder>(m, "BLooper",R"doc(
@@ -489,14 +522,21 @@ have to ``Lock()`` the object first.
    :rtype: int
 
 )doc")
-.def("HandlerAt", &BLooper::HandlerAt, py::return_value_policy::reference, R"doc(
-   Get the handler at an index of the list of associated handlers.
-   
-   :param index: The index.
-   :type index: int
-   :return: The handler at the specific index provided
-   :rtype: BHandler
+.def("HandlerAt",
+    [](BLooper& self, int32 index) {
+        return LooperBorrowedHandlerObject(
+            self, self.BLooper::HandlerAt(index));
+    }, R"doc(
+Get the handler at an index of the associated handler list.
 
+Python handlers registered through ``AddHandler()`` are returned as their
+existing Python objects. Native-only handlers that cannot be tied to a safe
+Python lifetime are not exposed.
+
+:param index: The index.
+:type index: int
+:return: The handler at the requested index, or ``None``.
+:rtype: BHandler
 )doc", py::arg("index"))
 .def("IndexOf", &BLooper::IndexOf, R"doc(
    Get the index of the handler that is in the associated handler list.
@@ -507,12 +547,19 @@ have to ``Lock()`` the object first.
    :rtype: int
    
 )doc", py::arg("handler"))
-.def("PreferredHandler", &BLooper::PreferredHandler, py::return_value_policy::reference, R"doc(
-   Get the preferred handler.
+.def("PreferredHandler",
+    [](BLooper& self) {
+        return LooperBorrowedHandlerObject(
+            self, self.BLooper::PreferredHandler());
+    }, R"doc(
+Get the preferred handler.
 
-   :return: The preferred handler, or ``None`` if none is set.
-   :rtype: BHandler
+Python handlers registered through ``AddHandler()`` are returned as their
+existing Python objects. Native-only handlers that cannot be tied to a safe
+Python lifetime are not exposed.
 
+:return: The preferred handler, or ``None`` if none is set.
+:rtype: BHandler
 )doc")
 .def("SetPreferredHandler", &BLooper::SetPreferredHandler, R"doc(
    Set a preferred handler.

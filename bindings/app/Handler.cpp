@@ -303,13 +303,6 @@ This method is reimplemented by subclasses.
 :param message: The message that needs to be handled.
 :type message: BMessage
 )doc", py::arg("message"))
-.def("Looper", &BHandler::Looper, R"doc(
-Return the looper that this handler is associated with.
-If the handler is not yet associated with a looper, it will return ``None``.
-
-:return: the looper that this handler is associated with, or ``None``.
-:rtype: BLooper
-)doc")
 .def("SetName", &BHandler::SetName, R"doc(
 Set or change the name of this handler.
 

@@ -697,16 +697,6 @@ Python lifetime are not exposed.
    :rtype: int
    
 )doc")
-.def_static("LooperForThread", &BLooper::LooperForThread, R"doc(
-   Static method to retrieve a BLooper for a specified thread.
-
-   :param thread: The ID of the thread for which you want to find the looper.
-   :type thread: thread_id
-   :return: The looper for the specified thread.
-   :rtype: BLooper
-
-)doc", py::arg("thread"))
-/*    debugging funcs     */
 .def("LockingThread", &BLooper::LockingThread, R"doc(
    Return the thread id of the thread that currently holds the lock.
 
